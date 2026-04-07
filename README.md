@@ -1,16 +1,16 @@
-## Hi there 👋
+# Marília Gomes — CS Manager
+Customer Success Manager | Florianópolis, Brasil
 
-<!--
-**marilia-cs/marilia-cs** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+Acredito que CS vai além da gestão de contas — une relacionamento genuíno com visão estratégica. Atuo há mais de 4 anos no segmento de SaaS/Tech ajudando pessoas e empresas a alcançarem seus melhores resultados, combinando uma abordagem humanizada com o uso de tecnologia e IA para ir cada vez mais longe.
 
-Here are some ideas to get you started:
+## O que você vai encontrar aqui
+Ferramentas práticas que criei para otimizar o dia a dia como CS:
+- Gestão de ongoing e acompanhamento de clientes
+- Templates de QBR e planos de sucesso
+- Dashboards de health score e métricas de expansão
+- … e novidades em constante desenvolvimento 🚧
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+## Vamos nos conectar
+Me encontre no LinkedIn e vamos conversar 💙
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mariliagomes-/)
