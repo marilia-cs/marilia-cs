@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Portfolio Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: #0c0f14; color: #e8edf5; font-family: 'DM Sans', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #13181f; }
+  ::-webkit-scrollbar-thumb { background: #1e2a3a; border-radius: 99px; }
+  input, select, textarea, button { font-family: inherit; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid #4d9ef7; outline-offset: 1px; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  .fade-in { animation: fadeIn .25s ease both; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.5; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ── Paleta ─────────────────────────────────────────────────────────────────
+const C = {
+  bg:"#0c0f14", surface:"#13181f", surface2:"#1a2130",
+  border:"#1e2a3a", border2:"#253448",
+  accent:"#4d9ef7", accent2:"#7b5ea7", accent3:"#ff6b4a", accent4:"#c77dff",
+  green:"#34d399", yellow:"#fbbf24", red:"#f87171",
+  text:"#e8edf5", muted:"#6b7b93", muted2:"#8fa3bf",
+};
+
+// ── Constantes ─────────────────────────────────────────────────────────────
+const HEALTH = [
+  { value:"verde",    label:"Saudável", color:C.green,  emoji:"🟢" },
+  { value:"amarelo",  label:"Atenção",  color:C.yellow, emoji:"🟡" },
+  { value:"vermelho", label:"Em risco", color:C.red,    emoji:"🔴" },
+];
+const FASES  = ["Onboarding","Ongoing","Adoção","Expansão","Em risco","Renovação","Churned"];
+const TIERS  = ["High-touch","Mid-touch","Low-touch","Tech-touch"];
+const PERFIS = ["Analítico","Expressivo","Controlador","Apoiador","Misto"];
+const CANAIS = ["E-mail","Reunião","WhatsApp","Slack","Telefone","Assíncrono"];
+const TONS   = ["Formal","Informal","Técnico","Executivo"];
+const PAPEIS = ["Decisor","Influenciador","Usuário","Sponsor","Detrator"];
+const TIPOS_INTERACAO = ["Reunião","E-mail","WhatsApp","Ligação","Slack","QBR","Outro"];
+const STORE  = "cs_portfolio_v2";
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const uid  = () => Math.random().toString(36).slice(2,9);
+const save = (d) => { try { localStorage.setItem(STORE, JSON.stringify(d)); } catch {} };
+const today = () => new Date().toISOString().slice(0,10);
+
+const daysUntilRenewal = (dateStr) => {
+  if (!dateStr) return null;
+  const diff = new Date(dateStr).setHours(0,0,0,0) - new Date().setHours(0,0,0,0);
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+};
+
+const renewalColor = (days) => {
+  if (days === null) return null;
+  if (days <= 30) return C.red;
+  if (days <= 60) return C.yellow;
+  if (days <= 90) return C.accent;
+  return null;
+};
+
+const exportCSV = (clients) => {
+  const headers = ['Nome','Empresa','Segmento','Tier','MRR','Renovação','Health','Fase','NPS','Última Interação','Próximos Passos','Expansão'];
+  const rows = clients.map(c => [
+    c.nome, c.empresa, c.segmento, c.tier, c.mrr, c.renovacao,
+    HEALTH.find(h=>h.value===c.health)?.label||'',
+    c.fase, c.nps, c.ultimaInteracao, c.proximosPassos, c.expansao
+  ].map(v => `"${(v||'').toString().replace(/"/g,'""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'carteira_cs.csv'; a.click();
+  URL.revokeObjectURL(url);
+};
+
+const emptyClient = () => ({
+  id:uid(), nome:"", empresa:"", segmento:"", tier:"High-touch",
+  mrr:"", renovacao:"", contato:"", perfil:"", canal:[], tom:"", frequencia:"",
+  motivacoes:"", observacoesPerfil:"", stakeholders:[],
+  insatisfacoes:"", tickets:"", notasVendas:"", marcos:"",
+  health:"verde", fase:"Onboarding", nps:"", ultimaInteracao:"",
+  expansao:"", featuresInteresse:"", proximosPassos:"", notas:"",
+  interacoes:[],
+  criadoEm: new Date().toISOString(),
+});
+const emptyStk = () => ({ id:uid(), nome:"", cargo:"", papel:"Usuário", email:"", notas:"" });
+const emptyInteracao = () => ({ id:uid(), data:today(), tipo:"Reunião", resumo:"" });
+
+// ── Clientes demo ──────────────────────────────────────────────────────────
+const DEMO_CLIENTS = [
+  {
+    id:"demo1", nome:"Rodrigo Mendes", empresa:"ContaFácil Tecnologia",
+    segmento:"Fintech", tier:"High-touch", mrr:"8500",
+    renovacao: (() => { const d = new Date(); d.setDate(d.getDate()+33); return d.toISOString().slice(0,10); })(),
+    contato:"rodrigo.mendes@contafacil.com.br",
+    perfil:"Controlador", canal:["E-mail","Reunião"], tom:"Executivo", frequencia:"Quinzenal",
+    motivacoes:"Foco em ROI e compliance regulatório. Questiona bastante segurança de dados e rastreabilidade. Não gosta de surpresas — prefere ser comunicado com antecedência sobre qualquer mudança.",
+    observacoesPerfil:"Fica na defensiva quando questionado sobre adoção interna. Prefere receber materiais antes das reuniões. Muito direto e objetivo nas calls.",
+    stakeholders:[
+      {id:"stk1", nome:"Rodrigo Mendes", cargo:"CFO", papel:"Decisor", email:"rodrigo.mendes@contafacil.com.br", notas:"Principal ponto de contato. Aprova renovações."},
+      {id:"stk2", nome:"Letícia Prado", cargo:"Analista Financeiro Sênior", papel:"Usuário", email:"leticia.prado@contafacil.com.br", notas:"Usuária-chave. Muito engajada. Boa aliada para expansão."},
+    ],
+    insatisfacoes:"Relatórios de conciliação com atraso nas últimas duas semanas do mês. Interface mobile considerada pouco intuitiva pela equipe. Já abriu 2 tickets sobre isso em fevereiro.",
+    tickets:"3 tickets abertos em fev/26 sobre relatórios. 1 ticket crítico sobre permissões de acesso resolvido em mar/26.",
+    notasVendas:"Contrato fechado com 15% de desconto. Vendas prometeu melhorias na interface mobile para Q2/26. Cliente veio de uma migração do concorrente Fintera.",
+    marcos:"Reduziu em 35% o tempo de fechamento mensal após o onboarding. Integração com ERP concluída em jan/26.",
+    health:"amarelo", fase:"Ongoing", nps:"6", ultimaInteracao:"2026-03-28",
+    expansao:"Interesse sinalizado no módulo de Conciliação Avançada. Mencionou crescimento do time financeiro em Q3.",
+    featuresInteresse:"Relatórios customizáveis, API para integração com SAP, dashboard mobile",
+    proximosPassos:"Agendar reunião de alinhamento antes da renovação. Apresentar roadmap Q3. Resolver pendência dos relatórios com time de produto.",
+    notas:"Cliente estratégico — MRR alto e potencial de expansão. Atenção redobrada até a renovação.",
+    interacoes:[
+      {id:"int1", data:"2026-03-28", tipo:"Reunião", resumo:"Check-in quinzenal. Rodrigo demonstrou preocupação com os relatórios atrasados. Comprometemos entrega de solução em 2 semanas. Tom um pouco tenso."},
+      {id:"int2", data:"2026-03-10", tipo:"E-mail", resumo:"Envio do resumo de marcos do Q1. Boa receptividade da Letícia. Rodrigo não respondeu diretamente."},
+      {id:"int3", data:"2026-02-18", tipo:"QBR", resumo:"QBR do trimestre. Apresentamos ROI de 35% no fechamento mensal. Rodrigo sinalizou interesse no módulo de Conciliação Avançada para o segundo semestre."},
+    ],
+    criadoEm:"2025-11-01T10:00:00.000Z",
+  },
+  {
+    id:"demo2", nome:"Camila Torres", empresa:"GreenLog Soluções Logísticas",
+    segmento:"Logística / Supply Chain", tier:"Mid-touch", mrr:"3200",
+    renovacao: (() => { const d = new Date(); d.setDate(d.getDate()+161); return d.toISOString().slice(0,10); })(),
+    contato:"camila.torres@greenlog.com.br",
+    perfil:"Expressivo", canal:["WhatsApp","Reunião"], tom:"Informal", frequencia:"Mensal",
+    motivacoes:"Eficiência operacional e visibilidade em tempo real das entregas. Adora testar novas features — sempre participa dos programas beta. Valoriza agilidade no suporte.",
+    observacoesPerfil:"Muito comunicativa e proativa. Compartilha feedbacks espontaneamente via WhatsApp. Engaja bem com conteúdo de produto enviado antes das reuniões.",
+    stakeholders:[
+      {id:"stk3", nome:"Camila Torres", cargo:"COO", papel:"Decisor", email:"camila.torres@greenlog.com.br", notas:"Principal ponto de contato e decisora. Grande promotora da ferramenta internamente."},
+      {id:"stk4", nome:"Felipe Araújo", cargo:"Gerente de Operações", papel:"Usuário", email:"felipe.araujo@greenlog.com.br", notas:"Usuário-chave do módulo de rastreamento. Muito satisfeito com a solução atual."},
+    ],
+    insatisfacoes:"Nenhuma insatisfação relevante no momento. Sugeriu melhoria no filtro de relatórios por região — já encaminhado para o produto.",
+    tickets:"Apenas 1 ticket em jan/26 sobre dúvida de configuração — resolvido em menos de 2h.",
+    notasVendas:"Contrato fechado na proposta padrão. Cliente indicado por outro cliente da carteira (LogiRápido). Onboarding muito tranquilo.",
+    marcos:"Reduziu 40% do tempo de rastreamento de entregas após ativar a integração com transportadoras em dez/25. NPS de 9 registrado em mar/26.",
+    health:"verde", fase:"Expansão", nps:"9", ultimaInteracao:"2026-04-01",
+    expansao:"Grande interesse no módulo de Analytics Preditivo. Mencionou crescimento de 30% da frota em 2026 — possível expansão de licenças.",
+    featuresInteresse:"Analytics preditivo, painel de KPIs por transportadora, integração com WMS",
+    proximosPassos:"Enviar proposta do módulo de Analytics Preditivo. Incluir no programa beta do novo painel de KPIs.",
+    notas:"Cliente modelo — ótimo NPS, engajada e com grande potencial de expansão. Prioridade para upsell em Q2.",
+    interacoes:[
+      {id:"int4", data:"2026-04-01", tipo:"WhatsApp", resumo:"Camila enviou feedback espontâneo elogiando a nova feature de rastreamento em tempo real. Ótima abertura para conversa de upsell."},
+      {id:"int5", data:"2026-03-15", tipo:"Reunião", resumo:"Reunião mensal. Apresentamos resultados do Q1. NPS 9 registrado. Camila mencionou crescimento da frota e perguntou sobre analytics. Excelente oportunidade de expansão identificada."},
+      {id:"int6", data:"2026-02-10", tipo:"E-mail", resumo:"Envio de convite para programa beta do Analytics Preditivo. Resposta imediata e positiva — confirmou participação."},
+    ],
+    criadoEm:"2025-10-15T14:00:00.000Z",
+  },
+];
+
+// ── Load inicial ───────────────────────────────────────────────────────────
+const loadInitial = () => {
+  try {
+    const raw = localStorage.getItem(STORE);
+    if (raw === null) return DEMO_CLIENTS;
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.length === 0) return DEMO_CLIENTS;
+    return parsed;
+  } catch { return DEMO_CLIENTS; }
+};
+
+// ── Base styles ────────────────────────────────────────────────────────────
+const inp = {
+  width:"100%", background:C.surface2, border:`1px solid ${C.border2}`,
+  borderRadius:8, color:C.text, fontSize:13.5, padding:"9px 12px", lineHeight:1.5,
+};
+const btn = (bg, color, extra={}) => ({
+  padding:"9px 18px", background:bg, border:"none", borderRadius:8,
+  color, fontWeight:600, fontSize:13, cursor:"pointer", ...extra,
+});
+
+// ── Primitives ─────────────────────────────────────────────────────────────
+function Field({ label, hint, children }) {
+  return (
+    <div style={{marginBottom:16}}>
+      <label style={{display:"block",fontSize:10.5,fontWeight:700,letterSpacing:".12em",
+        textTransform:"uppercase",color:C.muted2,marginBottom:5}}>{label}</label>
+      {hint && <p style={{fontSize:11,color:C.muted,marginBottom:5,lineHeight:1.45}}>{hint}</p>}
+      {children}
+    </div>
+  );
+}
+const Input = ({value,onChange,placeholder,type="text"}) =>
+  <input type={type} value={value} onChange={e=>onChange(e.target.value)}
+    placeholder={placeholder} style={inp}/>;
+const Textarea = ({value,onChange,placeholder,rows=3}) =>
+  <textarea value={value} onChange={e=>onChange(e.target.value)}
+    placeholder={placeholder} rows={rows} style={{...inp,resize:"vertical",lineHeight:1.6}}/>;
+
+function Sel({value,onChange,opts}) {
+  return (
+    <select value={value} onChange={e=>onChange(e.target.value)} style={{...inp,cursor:"pointer"}}>
+      <option value="">Selecionar…</option>
+      {opts.map(o=><option key={o} value={o}>{o}</option>)}
+    </select>
+  );
+}
+function MultiSel({value=[],onChange,opts}) {
+  const toggle = o => onChange(value.includes(o)?value.filter(x=>x!==o):[...value,o]);
+  return (
+    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+      {opts.map(o=>(
+        <button key={o} onClick={()=>toggle(o)} type="button"
+          style={{padding:"5px 12px",borderRadius:99,fontSize:12,cursor:"pointer",
+            border:`1px solid ${value.includes(o)?C.accent:C.border2}`,
+            background:value.includes(o)?`${C.accent}18`:C.surface2,
+            color:value.includes(o)?C.accent:C.muted2}}>
+          {o}
+        </button>
+      ))}
+    </div>
+  );
+}
+function HealthPicker({value,onChange}) {
+  return (
+    <div style={{display:"flex",gap:8}}>
+      {HEALTH.map(h=>(
+        <button key={h.value} onClick={()=>onChange(h.value)} type="button"
+          style={{flex:1,padding:"9px 4px",borderRadius:8,cursor:"pointer",
+            border:`1px solid ${value===h.value?h.color:C.border2}`,
+            background:value===h.value?`${h.color}18`:C.surface2,
+            color:value===h.value?h.color:C.muted2,
+            fontSize:12,fontWeight:700}}>
+          {h.emoji} {h.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+function Badge({label,color=C.accent}) {
+  return (
+    <span style={{display:"inline-block",padding:"2px 9px",borderRadius:99,
+      fontSize:11,fontWeight:600,background:`${color}18`,
+      color,border:`1px solid ${color}30`,whiteSpace:"nowrap"}}>
+      {label}
+    </span>
+  );
+}
+function Dot({value,size=9}) {
+  const h = HEALTH.find(x=>x.value===value)||HEALTH[0];
+  return <span style={{display:"inline-block",width:size,height:size,borderRadius:"50%",
+    background:h.color,boxShadow:`0 0 6px ${h.color}66`,flexShrink:0}}/>;
+}
+function Divider({icon,label,color=C.accent}) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:9,
+      margin:"26px 0 16px",paddingBottom:10,borderBottom:`1px solid ${C.border}`}}>
+      <span style={{fontSize:15}}>{icon}</span>
+      <span style={{fontSize:10,fontWeight:700,letterSpacing:".14em",
+        textTransform:"uppercase",color}}>{label}</span>
+    </div>
+  );
+}
+
+// ── Renewal Alert ──────────────────────────────────────────────────────────
+function RenewalAlert({renovacao, inline=false}) {
+  const days = daysUntilRenewal(renovacao);
+  const color = renewalColor(days);
+  if (!color) return null;
+  const label = days <= 0 ? "Contrato vencido!" : days === 1 ? "Vence amanhã!" : `Renova em ${days}d`;
+  if (inline) return <Badge label={`🔔 ${label}`} color={color}/>;
+  return (
+    <div style={{marginTop:8,padding:"6px 10px",borderRadius:7,
+      background:`${color}15`,border:`1px solid ${color}40`,
+      fontSize:11.5,color,fontWeight:600}}>
+      🔔 {label}
+    </div>
+  );
+}
+
+// ── Stakeholder Editor ─────────────────────────────────────────────────────
+function StkEditor({list,onChange}) {
+  const add = () => onChange([...list,emptyStk()]);
+  const rm  = id => onChange(list.filter(s=>s.id!==id));
+  const upd = (id,k,v) => onChange(list.map(s=>s.id===id?{...s,[k]:v}:s));
+  return (
+    <div>
+      {list.map(s=>(
+        <div key={s.id} style={{background:C.surface2,border:`1px solid ${C.border}`,
+          borderRadius:10,padding:14,marginBottom:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
+            <input value={s.nome} onChange={e=>upd(s.id,"nome",e.target.value)}
+              placeholder="Nome" style={{...inp,fontSize:12.5}}/>
+            <input value={s.cargo} onChange={e=>upd(s.id,"cargo",e.target.value)}
+              placeholder="Cargo" style={{...inp,fontSize:12.5}}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}}>
+            <select value={s.papel} onChange={e=>upd(s.id,"papel",e.target.value)}
+              style={{...inp,fontSize:12.5,cursor:"pointer"}}>
+              {PAPEIS.map(p=><option key={p}>{p}</option>)}
+            </select>
+            <input value={s.email} onChange={e=>upd(s.id,"email",e.target.value)}
+              placeholder="E-mail / contato" style={{...inp,fontSize:12.5}}/>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <input value={s.notas} onChange={e=>upd(s.id,"notas",e.target.value)}
+              placeholder="Notas sobre essa pessoa…" style={{...inp,fontSize:12.5,flex:1}}/>
+            <button onClick={()=>rm(s.id)} type="button"
+              style={{padding:"0 12px",background:"rgba(248,113,113,.1)",
+                border:"1px solid rgba(248,113,113,.25)",borderRadius:8,
+                color:C.red,cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
+          </div>
+        </div>
+      ))}
+      <button onClick={add} type="button"
+        style={{width:"100%",padding:9,background:"transparent",
+          border:`1px dashed ${C.border2}`,borderRadius:8,
+          color:C.muted2,cursor:"pointer",fontSize:13}}>
+        + Adicionar stakeholder
+      </button>
+    </div>
+  );
+}
+
+// ── Interaction Log Editor ─────────────────────────────────────────────────
+function InteractionLogEditor({list=[],onChange}) {
+  const add = () => onChange([emptyInteracao(),...list]);
+  const rm  = id => onChange(list.filter(i=>i.id!==id));
+  const upd = (id,k,v) => onChange(list.map(i=>i.id===id?{...i,[k]:v}:i));
+  const sorted = [...list].sort((a,b)=>b.data.localeCompare(a.data));
+  return (
+    <div>
+      {sorted.map(i=>(
+        <div key={i.id} style={{background:C.surface2,border:`1px solid ${C.border}`,
+          borderRadius:10,padding:14,marginBottom:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"148px 140px 1fr auto",gap:10,alignItems:"start"}}>
+            <input type="date" value={i.data} onChange={e=>upd(i.id,"data",e.target.value)}
+              style={{...inp,fontSize:12.5}}/>
+            <select value={i.tipo} onChange={e=>upd(i.id,"tipo",e.target.value)}
+              style={{...inp,fontSize:12.5,cursor:"pointer"}}>
+              {TIPOS_INTERACAO.map(t=><option key={t}>{t}</option>)}
+            </select>
+            <input value={i.resumo} onChange={e=>upd(i.id,"resumo",e.target.value)}
+              placeholder="Resumo da interação…" style={{...inp,fontSize:12.5}}/>
+            <button onClick={()=>rm(i.id)} type="button"
+              style={{padding:"0 12px",background:"rgba(248,113,113,.1)",
+                border:"1px solid rgba(248,113,113,.25)",borderRadius:8,
+                color:C.red,cursor:"pointer",fontSize:18,lineHeight:1,height:38}}>×</button>
+          </div>
+        </div>
+      ))}
+      <button onClick={add} type="button"
+        style={{width:"100%",padding:9,background:"transparent",
+          border:`1px dashed ${C.border2}`,borderRadius:8,
+          color:C.muted2,cursor:"pointer",fontSize:13}}>
+        + Registrar interação
+      </button>
+    </div>
+  );
+}
+
+function G({label,hint,field}) {
+  return <Field label={label} hint={hint}>{field}</Field>;
+}
+
+// ── FORM ───────────────────────────────────────────────────────────────────
+function Form({initial,onSave,onCancel}) {
+  const [c,setC] = useState(()=> initial
+    ? {...emptyClient(), ...initial, interacoes: initial.interacoes||[] }
+    : emptyClient());
+  const s = k => v => setC(p=>({...p,[k]:v}));
+
+  return (
+    <div className="fade-in" style={{maxWidth:700,margin:"0 auto"}}>
+
+      <Divider icon="🏢" label="Identificação" color={C.accent}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <G label="Nome / Razão Social" field={<Input value={c.nome} onChange={s("nome")} placeholder="Ana Silva / Empresa XYZ"/>}/>
+        <G label="Empresa" field={<Input value={c.empresa} onChange={s("empresa")} placeholder="Nome da empresa"/>}/>
+        <G label="Segmento / Indústria" field={<Input value={c.segmento} onChange={s("segmento")} placeholder="Ex: Fintech, Varejo, RH…"/>}/>
+        <G label="Tier de Atendimento" field={<Sel value={c.tier} onChange={s("tier")} opts={TIERS}/>}/>
+        <G label="MRR / ARR (R$)" field={<Input value={c.mrr} onChange={s("mrr")} placeholder="Ex: 2.500"/>}/>
+        <G label="Renovação do Contrato" field={<Input value={c.renovacao} onChange={s("renovacao")} type="date"/>}/>
+        <G label="Contato Principal" field={<Input value={c.contato} onChange={s("contato")} placeholder="email@empresa.com"/>}/>
+        <G label="Fase do Ciclo de Vida" field={<Sel value={c.fase} onChange={s("fase")} opts={FASES}/>}/>
+      </div>
+
+      <Divider icon="🧠" label="Perfil Relacional" color={C.accent2}/>
+      <G label="Perfil de Personalidade"
+        hint="Como essa pessoa tende a se comportar? Orienta sua abordagem em reuniões e conversas."
+        field={<Sel value={c.perfil} onChange={s("perfil")} opts={PERFIS}/>}/>
+      <G label="Canal Preferido de Comunicação" field={<MultiSel value={c.canal} onChange={s("canal")} opts={CANAIS}/>}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <G label="Tom de Comunicação" field={<Sel value={c.tom} onChange={s("tom")} opts={TONS}/>}/>
+        <G label="Frequência Ideal de Contato" hint="Semanal, quinzenal, mensal…"
+          field={<Input value={c.frequencia} onChange={s("frequencia")} placeholder="Ex: quinzenal"/>}/>
+      </div>
+      <G label="Motivações & O que Valoriza"
+        hint="ROI, reconhecimento, eficiência, segurança? O que move esse cliente?"
+        field={<Textarea value={c.motivacoes} onChange={s("motivacoes")}
+          placeholder="Ex: muito focado em ROI. Não gosta de jargões. Valoriza proatividade."/>}/>
+      <G label="Observações sobre o Perfil"
+        hint="Anotações pontuais sobre comportamento, reações em reuniões, preferências específicas."
+        field={<Textarea value={c.observacoesPerfil} onChange={s("observacoesPerfil")} rows={3}
+          placeholder="Ex: Fica na defensiva quando questionado sobre processos internos."/>}/>
+
+      <Divider icon="👥" label="Stakeholders Mapeados" color={C.accent4}/>
+      <StkEditor list={c.stakeholders} onChange={s("stakeholders")}/>
+
+      <Divider icon="📋" label="Histórico & Contexto" color={C.accent3}/>
+      <G label="Pontos de Insatisfação Identificados"
+        hint="Problemas relatados, reclamações recorrentes, frustrações com o produto ou suporte."
+        field={<Textarea value={c.insatisfacoes} onChange={s("insatisfacoes")}
+          placeholder="Ex: Reclamou do tempo de resposta do suporte. Bug na integração em jan/24."/>}/>
+      <G label="Tickets & Problemas Frequentes"
+        hint="Tipos de demandas que mais aparecem, chamados abertos, SLAs críticos."
+        field={<Textarea value={c.tickets} onChange={s("tickets")}
+          placeholder="Ex: Alto volume sobre relatórios. Problema de permissão recorrente."/>}/>
+      <G label="Notas do Time de Vendas / Antecessor"
+        hint="O que foi prometido, contexto da negociação, particularidades do onboarding."
+        field={<Textarea value={c.notasVendas} onChange={s("notasVendas")}
+          placeholder="Ex: Contrato fechado com desconto. Vendas prometeu integração com SAP em 60 dias."/>}/>
+      <G label="Marcos já Atingidos" hint="Vitórias e resultados alcançados — ouro para QBRs."
+        field={<Textarea value={c.marcos} onChange={s("marcos")} rows={2}
+          placeholder="Ex: Reduziu 30% do tempo de processamento após onboarding."/>}/>
+
+      <Divider icon="📊" label="Saúde & Status" color={C.green}/>
+      <G label="Health Score" field={<HealthPicker value={c.health} onChange={s("health")}/>}/>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginTop:4}}>
+        <G label="NPS Registrado" field={<Input value={c.nps} onChange={s("nps")} placeholder="Ex: 8"/>}/>
+        <div style={{marginBottom:16}}>
+          <label style={{display:"block",fontSize:10.5,fontWeight:700,letterSpacing:".12em",
+            textTransform:"uppercase",color:C.muted2,marginBottom:5}}>Última Interação</label>
+          <p style={{fontSize:11,color:C.muted,marginBottom:5,lineHeight:1.45}}>
+            Preenchido automaticamente com base no Log de Interações.
+          </p>
+          <div style={{...inp, color: c.interacoes?.length > 0 ? C.text : C.muted,
+            background:C.surface, cursor:"default"}}>
+            {c.interacoes?.length > 0
+              ? [...c.interacoes].sort((a,b)=>b.data.localeCompare(a.data))[0].data
+              : "Nenhuma interação registrada"}
+          </div>
+        </div>
+      </div>
+
+      <Divider icon="🚀" label="Oportunidades" color={C.accent}/>
+      <G label="Potencial de Expansão / Upsell" hint="Possibilidades identificadas de aumentar o contrato."
+        field={<Textarea value={c.expansao} onChange={s("expansao")} rows={2}
+          placeholder="Ex: Interessado no módulo de BI. Mencionou crescimento de equipe."/>}/>
+      <G label="Features de Interesse"
+        hint="Funcionalidades que o cliente quer ou que seriam valiosas para ele."
+        field={<Input value={c.featuresInteresse} onChange={s("featuresInteresse")}
+          placeholder="Ex: Automação de relatórios, API pública, integração com Slack"/>}/>
+
+      <Divider icon="🎯" label="Próximos Passos" color={C.accent3}/>
+      <G label="Ações Planejadas" field={<Textarea value={c.proximosPassos} onChange={s("proximosPassos")}
+          placeholder="Ex: Agendar QBR para Maio. Enviar proposta de upsell. Escalar bug com produto."/>}/>
+
+      <Divider icon="💬" label="Log de Interações" color={C.accent2}/>
+      <p style={{fontSize:11.5,color:C.muted,marginBottom:14,lineHeight:1.6}}>
+        Registre cada contato com o cliente — reuniões, e-mails, mensagens. Mantém o histórico organizado e facilita o contexto entre interações.
+      </p>
+      <InteractionLogEditor list={c.interacoes} onChange={s("interacoes")}/>
+
+      <Divider icon="📝" label="Notas Gerais" color={C.muted2}/>
+      <G label="Observações livres" field={<Textarea value={c.notas} onChange={s("notas")} rows={4}
+          placeholder="Qualquer informação relevante que não se encaixou nos campos acima…"/>}/>
+
+      <div style={{display:"flex",gap:10,marginTop:28,paddingTop:20,borderTop:`1px solid ${C.border}`}}>
+        <button onClick={()=>onSave(c)}
+          style={{flex:1,...btn(C.accent,"#000"),fontSize:14,padding:"11px"}}>
+          Salvar Cliente
+        </button>
+        <button onClick={onCancel}
+          style={{...btn(C.surface2,C.muted2),border:`1px solid ${C.border}`,padding:"11px 20px"}}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── DETAIL ─────────────────────────────────────────────────────────────────
+function Detail({client,onEdit,onDelete}) {
+  const h = HEALTH.find(x=>x.value===client.health)||HEALTH[0];
+  const sortedInteracoes = [...(client.interacoes||[])].sort((a,b)=>b.data.localeCompare(a.data));
+  const tipoColors = {
+    "Reunião":C.accent,"E-mail":C.accent2,"WhatsApp":C.green,
+    "Ligação":C.yellow,"Slack":C.accent4,"QBR":C.accent3,"Outro":C.muted2
+  };
+
+  const Sec = ({icon,label,color=C.accent,children}) => (
+    <div style={{marginBottom:26}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,
+        paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>
+        <span>{icon}</span>
+        <span style={{fontSize:10,fontWeight:700,letterSpacing:".14em",textTransform:"uppercase",color}}>{label}</span>
+      </div>
+      {children}
+    </div>
+  );
+  const Row = ({label,value}) => value ? (
+    <div style={{marginBottom:10}}>
+      {label && <span style={{fontSize:10,color:C.muted,fontWeight:700,
+        textTransform:"uppercase",letterSpacing:".08em"}}>{label}<br/></span>}
+      <span style={{fontSize:13.5,color:C.text,lineHeight:1.65}}>{value}</span>
+    </div>
+  ) : null;
+
+  return (
+    <div className="fade-in">
+      {/* Header */}
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,
+        borderRadius:14,padding:"22px 26px",marginBottom:22}}>
+        <div style={{display:"flex",alignItems:"flex-start",
+          justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
+              <Dot value={client.health} size={11}/>
+              <span style={{fontSize:22,fontWeight:700}}>{client.nome||"Sem nome"}</span>
+            </div>
+            {client.empresa && <p style={{color:C.muted2,fontSize:13,marginBottom:8}}>{client.empresa}</p>}
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {client.tier     && <Badge label={client.tier}     color={C.accent}/>}
+              {client.fase     && <Badge label={client.fase}     color={C.accent2}/>}
+              {client.segmento && <Badge label={client.segmento} color={C.muted2}/>}
+              <Badge label={`${h.emoji} ${h.label}`} color={h.color}/>
+              <RenewalAlert renovacao={client.renovacao} inline={true}/>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={onEdit} style={{...btn(C.accent,"#000"),padding:"8px 16px"}}>✎ Editar</button>
+            <button onClick={onDelete}
+              style={{...btn("rgba(248,113,113,.1)",C.red),
+                border:"1px solid rgba(248,113,113,.3)",padding:"8px 14px"}}>🗑</button>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginTop:18}}>
+          {[
+            {l:"MRR",          v: client.mrr ? `R$ ${client.mrr}` : "—"},
+            {l:"Renovação",    v: client.renovacao || "—"},
+            {l:"NPS",          v: client.nps || "—"},
+            {l:"Últ. contato", v: client.ultimaInteracao || "—"},
+          ].map(s=>(
+            <div key={s.l} style={{background:C.surface2,border:`1px solid ${C.border}`,
+              borderRadius:8,padding:"10px 14px"}}>
+              <div style={{fontSize:10,color:C.muted,fontWeight:600,
+                textTransform:"uppercase",letterSpacing:".1em",marginBottom:4}}>{s.l}</div>
+              <div style={{fontSize:14,fontWeight:700}}>{s.v}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+        <div>
+          <Sec icon="🧠" label="Perfil Relacional" color={C.accent2}>
+            <Row label="Perfil"     value={client.perfil}/>
+            <Row label="Canal"      value={client.canal?.join(", ")}/>
+            <Row label="Tom"        value={client.tom}/>
+            <Row label="Frequência" value={client.frequencia}/>
+            <Row label="Motivações" value={client.motivacoes}/>
+            <Row label="Observações sobre o Perfil" value={client.observacoesPerfil}/>
+          </Sec>
+          <Sec icon="🚀" label="Oportunidades" color={C.accent}>
+            <Row label="Expansão / Upsell"     value={client.expansao}/>
+            <Row label="Features de interesse" value={client.featuresInteresse}/>
+          </Sec>
+        </div>
+        <div>
+          <Sec icon="📋" label="Histórico & Contexto" color={C.accent3}>
+            <Row label="Insatisfações"   value={client.insatisfacoes}/>
+            <Row label="Tickets"         value={client.tickets}/>
+            <Row label="Notas de vendas" value={client.notasVendas}/>
+            <Row label="Marcos"          value={client.marcos}/>
+          </Sec>
+          <Sec icon="🎯" label="Próximos Passos" color={C.accent3}>
+            <Row label="" value={client.proximosPassos}/>
+          </Sec>
+          {client.notas && (
+            <Sec icon="📝" label="Notas Gerais" color={C.muted2}>
+              <Row label="" value={client.notas}/>
+            </Sec>
+          )}
+        </div>
+      </div>
+
+      {/* Stakeholders */}
+      {client.stakeholders?.length > 0 && (
+        <div style={{marginBottom:26}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,
+            paddingBottom:10,borderBottom:`1px solid ${C.border}`}}>
+            <span>👥</span>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:".14em",
+              textTransform:"uppercase",color:C.accent4}}>Stakeholders Mapeados</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+            {client.stakeholders.map(s=>(
+              <div key={s.id} style={{background:C.surface,border:`1px solid ${C.border}`,
+                borderRadius:10,padding:"14px 16px"}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:2}}>{s.nome||"—"}</div>
+                <div style={{fontSize:12,color:C.muted2,marginBottom:7}}>{s.cargo}</div>
+                <Badge label={s.papel} color={C.accent4}/>
+                {s.email && <p style={{fontSize:11.5,color:C.muted,marginTop:7}}>{s.email}</p>}
+                {s.notas && <p style={{fontSize:12,color:C.muted2,marginTop:6,lineHeight:1.5}}>{s.notas}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Log de Interações */}
+      {sortedInteracoes.length > 0 && (
+        <div style={{marginBottom:26}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,
+            paddingBottom:10,borderBottom:`1px solid ${C.border}`}}>
+            <span>💬</span>
+            <span style={{fontSize:10,fontWeight:700,letterSpacing:".14em",
+              textTransform:"uppercase",color:C.accent2}}>Log de Interações</span>
+            <span style={{fontSize:11,color:C.muted,marginLeft:4}}>({sortedInteracoes.length})</span>
+          </div>
+          <div style={{position:"relative",paddingLeft:24}}>
+            <div style={{position:"absolute",left:6,top:6,bottom:6,width:2,
+              background:`linear-gradient(to bottom, ${C.accent2}88, ${C.border})`,borderRadius:2}}/>
+            {sortedInteracoes.map((i)=>{
+              const tc = tipoColors[i.tipo]||C.muted2;
+              return (
+                <div key={i.id} style={{position:"relative",marginBottom:14,paddingLeft:20}}>
+                  <div style={{position:"absolute",left:-13,top:5,width:10,height:10,
+                    borderRadius:"50%",background:tc,
+                    boxShadow:`0 0 6px ${tc}88`,border:`2px solid ${C.bg}`}}/>
+                  <div style={{background:C.surface,border:`1px solid ${C.border}`,
+                    borderRadius:10,padding:"12px 16px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                      <Badge label={i.tipo} color={tc}/>
+                      <span style={{fontSize:11.5,color:C.muted}}>{i.data}</span>
+                    </div>
+                    {i.resumo && <p style={{fontSize:13,color:C.text,lineHeight:1.65}}>{i.resumo}</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── CARD ───────────────────────────────────────────────────────────────────
+function Card({client,onClick}) {
+  const [hov,setHov] = useState(false);
+  const h = HEALTH.find(x=>x.value===client.health)||HEALTH[0];
+  const rColor = renewalColor(daysUntilRenewal(client.renovacao));
+  return (
+    <div onClick={onClick}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      style={{background:C.surface,borderRadius:12,padding:"18px 20px",cursor:"pointer",
+        transition:"transform .15s, border-color .2s",
+        border:`1px solid ${hov?h.color:C.border}`,
+        borderLeft:`3px solid ${h.color}`,
+        transform:hov?"translateY(-2px)":"none"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+            <Dot value={client.health}/>
+            <span style={{fontWeight:700,fontSize:14.5,
+              whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+              {client.nome||"Sem nome"}
+            </span>
+          </div>
+          {client.empresa && <p style={{fontSize:12,color:C.muted,marginBottom:8}}>{client.empresa}</p>}
+          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            {client.tier && <Badge label={client.tier} color={C.accent}/>}
+            {client.fase && <Badge label={client.fase} color={C.accent2}/>}
+          </div>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
+          {client.mrr && <div style={{fontSize:13,fontWeight:700}}>R$ {client.mrr}</div>}
+          {client.renovacao && <div style={{fontSize:11,color:C.muted,marginTop:3}}>↻ {client.renovacao}</div>}
+        </div>
+      </div>
+      {rColor
+        ? <RenewalAlert renovacao={client.renovacao}/>
+        : client.proximosPassos && (
+            <p style={{fontSize:11.5,color:C.muted,marginTop:10,paddingTop:10,
+              borderTop:`1px solid ${C.border}`,lineHeight:1.5,
+              whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+              🎯 {client.proximosPassos}
+            </p>
+          )
+      }
+    </div>
+  );
+}
+
+// ── APP ────────────────────────────────────────────────────────────────────
+function App() {
+  const [clients, setClients] = useState(loadInitial);
+  const [view,    setView]    = useState("list");
+  const [sel,     setSel]     = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [search,  setSearch]  = useState("");
+  const [fHealth, setFHealth] = useState("");
+  const [fFase,   setFFase]   = useState("");
+  const [sortBy,  setSortBy]  = useState("criadoEm");
+
+  const persist = list => { setClients(list); save(list); };
+
+  const handleSave = c => {
+    const lastInteraction = c.interacoes?.length > 0
+      ? [...c.interacoes].sort((a,b)=>b.data.localeCompare(a.data))[0].data
+      : c.ultimaInteracao || "";
+    const updated = {...c, ultimaInteracao: lastInteraction};
+    const exists = clients.find(x=>x.id===updated.id);
+    const next = exists ? clients.map(x=>x.id===updated.id?updated:x) : [...clients,updated];
+    persist(next);
+    setSel(c);
+    setView("detail");
+  };
+
+  const handleDelete = id => {
+    if (!confirm("Remover esse cliente da carteira?")) return;
+    persist(clients.filter(c=>c.id!==id));
+    setView("list"); setSel(null);
+  };
+
+  const filtered = clients.filter(c=>{
+    const q = search.toLowerCase();
+    return (!q || [c.nome,c.empresa,c.segmento].some(f=>f?.toLowerCase().includes(q)))
+      && (!fHealth || c.health===fHealth)
+      && (!fFase   || c.fase===fFase);
+  });
+
+  const sortedClients = [...filtered].sort((a,b)=>{
+    if (sortBy==="mrr")       return (parseFloat(b.mrr)||0)-(parseFloat(a.mrr)||0);
+    if (sortBy==="renovacao")  return (a.renovacao||"9999").localeCompare(b.renovacao||"9999");
+    if (sortBy==="health") {
+      const order={vermelho:0,amarelo:1,verde:2};
+      return (order[a.health]||0)-(order[b.health]||0);
+    }
+    return (b.criadoEm||"").localeCompare(a.criadoEm||"");
+  });
+
+  const stats = {
+    total:    clients.length,
+    verde:    clients.filter(c=>c.health==="verde").length,
+    amarelo:  clients.filter(c=>c.health==="amarelo").length,
+    vermelho: clients.filter(c=>c.health==="vermelho").length,
+  };
+
+  const alertCount = clients.filter(c=>renewalColor(daysUntilRenewal(c.renovacao))).length;
+
+  const goBack = () => {
+    if (view==="form" && sel) { setView("detail"); setEditing(null); }
+    else { setView("list"); setSel(null); setEditing(null); }
+  };
+
+  const currentClient = sel ? clients.find(c=>c.id===sel.id)||sel : null;
+
+  return (
+    <div style={{minHeight:"100vh",background:C.bg,color:C.text}}>
+
+      {/* TOPBAR */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,
+        padding:"13px 24px",display:"flex",alignItems:"center",
+        justifyContent:"space-between",gap:12,flexWrap:"wrap",
+        position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          {view!=="list" && (
+            <button onClick={goBack}
+              style={{...btn(C.surface2,C.muted2),border:`1px solid ${C.border}`,
+                padding:"7px 14px",fontSize:12.5}}>
+              ← Voltar
+            </button>
+          )}
+          <div>
+            <span style={{fontWeight:700,fontSize:16.5,letterSpacing:"-.02em"}}>📂 CS Portfolio</span>
+            <span style={{fontSize:12,color:C.muted,marginLeft:8}}>
+              {clients.length} cliente{clients.length!==1?"s":""}
+            </span>
+            {alertCount > 0 && (
+              <span style={{marginLeft:8,fontSize:11,fontWeight:700,
+                background:`${C.red}18`,color:C.red,
+                border:`1px solid ${C.red}40`,borderRadius:99,padding:"2px 8px"}}>
+                🔔 {alertCount} renovação{alertCount>1?"ões":""} próxima{alertCount>1?"s":""}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {view==="list" && (
+          <div style={{display:"flex",gap:8}}>
+            {clients.length > 0 && (
+              <button onClick={()=>exportCSV(clients)}
+                style={{...btn(C.surface2,C.muted2),border:`1px solid ${C.border}`,padding:"9px 16px"}}>
+                ↓ Exportar CSV
+              </button>
+            )}
+            <button onClick={()=>{setEditing(null);setView("form");}}
+              style={{...btn(C.accent,"#000"),padding:"9px 20px"}}>
+              + Novo Cliente
+            </button>
+          </div>
+        )}
+
+        {view==="detail" && currentClient && (
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>{setEditing(currentClient);setView("form");}}
+              style={{...btn(C.accent,"#000"),padding:"8px 16px"}}>✎ Editar</button>
+            <button onClick={()=>handleDelete(currentClient.id)}
+              style={{...btn("rgba(248,113,113,.1)",C.red),
+                border:"1px solid rgba(248,113,113,.3)",padding:"8px 14px"}}>🗑</button>
+          </div>
+        )}
+      </div>
+
+      {/* BODY */}
+      <div style={{padding:"26px 24px 60px",maxWidth:980,margin:"0 auto"}}>
+
+        {/* LIST */}
+        {view==="list" && (
+          <div className="fade-in">
+            {clients.length > 0 && (
+              <>
+                {/* Stats */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:22}}>
+                  {[
+                    {l:"Total",       v:stats.total,    c:C.accent},
+                    {l:"🟢 Saudável", v:stats.verde,    c:C.green},
+                    {l:"🟡 Atenção",  v:stats.amarelo,  c:C.yellow},
+                    {l:"🔴 Em risco", v:stats.vermelho, c:C.red},
+                  ].map(s=>(
+                    <div key={s.l} style={{background:C.surface,border:`1px solid ${C.border}`,
+                      borderRadius:10,padding:"13px 16px"}}>
+                      <div style={{fontSize:10,color:C.muted,fontWeight:700,
+                        textTransform:"uppercase",letterSpacing:".1em",marginBottom:5}}>{s.l}</div>
+                      <div style={{fontSize:26,fontWeight:700,color:s.c}}>{s.v}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Filters + Sort */}
+                <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
+                  <input value={search} onChange={e=>setSearch(e.target.value)}
+                    placeholder="🔍  Buscar cliente, empresa ou segmento…"
+                    style={{...inp,flex:1,minWidth:180}}/>
+                  <select value={fHealth} onChange={e=>setFHealth(e.target.value)}
+                    style={{...inp,width:"auto",cursor:"pointer"}}>
+                    <option value="">Todos os health</option>
+                    {HEALTH.map(h=><option key={h.value} value={h.value}>{h.emoji} {h.label}</option>)}
+                  </select>
+                  <select value={fFase} onChange={e=>setFFase(e.target.value)}
+                    style={{...inp,width:"auto",cursor:"pointer"}}>
+                    <option value="">Todas as fases</option>
+                    {FASES.map(f=><option key={f} value={f}>{f}</option>)}
+                  </select>
+                  <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
+                    style={{...inp,width:"auto",cursor:"pointer"}}>
+                    <option value="criadoEm">Ordenar: Mais recentes</option>
+                    <option value="mrr">Ordenar: Maior MRR</option>
+                    <option value="renovacao">Ordenar: Renovação próxima</option>
+                    <option value="health">Ordenar: Maior risco</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {clients.length===0 ? (
+              <div style={{textAlign:"center",padding:"80px 20px"}}>
+                <div style={{fontSize:52,marginBottom:16}}>📂</div>
+                <h2 style={{fontSize:20,fontWeight:700,marginBottom:8}}>Sua carteira está vazia</h2>
+                <p style={{color:C.muted2,marginBottom:24,lineHeight:1.7}}>
+                  Adicione seu primeiro cliente para começar a mapear<br/>
+                  perfis, histórico e oportunidades.
+                </p>
+                <button onClick={()=>setView("form")}
+                  style={{...btn(C.accent,"#000"),padding:"11px 28px",fontSize:14}}>
+                  + Adicionar Primeiro Cliente
+                </button>
+              </div>
+            ) : sortedClients.length===0 ? (
+              <div style={{textAlign:"center",padding:"60px 20px",color:C.muted}}>
+                Nenhum cliente encontrado com os filtros selecionados.
+              </div>
+            ) : (
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))",gap:13}}>
+                {sortedClients.map(c=>(
+                  <Card key={c.id} client={c} onClick={()=>{setSel(c);setView("detail");}}/>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* FORM */}
+        {view==="form" && (
+          <Form initial={editing} onSave={handleSave} onCancel={goBack}/>
+        )}
+
+        {/* DETAIL */}
+        {view==="detail" && currentClient && (
+          <Detail
+            client={currentClient}
+            onEdit={()=>{setEditing(currentClient);setView("form");}}
+            onDelete={()=>handleDelete(currentClient.id)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
