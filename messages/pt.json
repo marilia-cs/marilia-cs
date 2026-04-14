@@ -1,0 +1,62 @@
+{
+  "nav": {
+    "about": "Sobre",
+    "projects": "Projetos",
+    "contact": "Contato",
+    "language": "🇬🇧 EN"
+  },
+  "hero": {
+    "title": "Marília Gomes",
+    "role": "Customer Success Manager",
+    "bio": "Profissional de Customer Success com experiência em B2B e B2C, especializada em retenção, expansão de receita e gestão de relacionamentos estratégicos.",
+    "cta_projects": "Ver Projetos",
+    "cta_about": "Sobre mim"
+  },
+  "about": {
+    "title": "Sobre",
+    "bio_1": "Profissional de Customer Success com experiência em empresas B2B e B2C, especializada em retenção, expansão de receita e gestão de relacionamentos estratégicos. Atuei na Vista Software e Loft gerenciando contas estratégicas, conduzindo treinamentos, workshops e análises de métricas-chave como NPS, CSAT, Health Score, churn risk e MRR.",
+    "bio_2": "Possuo forte atuação em eficiência operacional, atendimento consultivo e gestão de experiências multicanal. Busco desafios que conectem estratégia, tecnologia e experiência do cliente para gerar resultados consistentes.",
+    "experience_title": "Experiência",
+    "experience": [
+      {
+        "role": "Customer Success Analyst",
+        "company": "Elements",
+        "period": "Nov 2025 — Presente",
+        "description": "Gestão ponta a ponta de chamados assegurando SLAs e satisfação do cliente. Priorização estratégica de demandas em ambiente de alto volume e múltiplos canais. Uso de ERP, Zendesk e Shopify para análise operacional e otimização de fluxos. Atuação em casos críticos e Reclame Aqui com foco em negociação e mitigação de riscos."
+      },
+      {
+        "role": "Sales & Customer Experience Consultant",
+        "company": "Allura Brand",
+        "period": "Mai 2025 — Nov 2025",
+        "description": "Condução do ciclo de vendas B2C com suporte consultivo ao cliente. Gestão de relacionamento com lojistas, fortalecendo parcerias e expansão comercial. Monitoramento de metas e indicadores de sell-out para apoiar desempenho de vendas."
+      },
+      {
+        "role": "Customer Success Manager",
+        "company": "Loft",
+        "period": "Abr 2024 — Fev 2025",
+        "description": "Gestão de clientes estratégicos no setor imobiliário com foco em satisfação e retenção. Condução de treinamentos e workshops para impulsionar adoção da plataforma. Análise de métricas de performance — NPS, CSAT, Health Score, churn risk e MRR — para orientar estratégias de retenção e expansão."
+      },
+      {
+        "role": "Customer Success Manager",
+        "company": "Vista Software",
+        "period": "Jun 2021 — Abr 2024",
+        "description": "Gestão de carteira de clientes promovendo engajamento e evolução do uso da plataforma. Execução de estratégias de retenção e expansão via upsell e cross-sell. Implementação de planos de sucesso personalizados, acompanhamento de KPIs e condução de treinamentos online e presenciais."
+      }
+    ]
+  },
+  "projects": {
+    "title": "Projetos",
+    "subtitle": "Casos, iniciativas e entregas que geraram impacto real.",
+    "empty": "Nenhum projeto encontrado.",
+    "items": []
+  },
+  "contact": {
+    "title": "Contato",
+    "subtitle": "Vamos conversar?",
+    "email": "marilia.agms@gmail.com",
+    "linkedin": "linkedin.com/in/mariliagomes-/"
+  },
+  "footer": {
+    "built": "Feito com"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:carvalhxlucas.pro)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s \"https://api.github.com/users/marilia-cs/repos?sort=updated&per_page=20\")",
+      "Bash(python3 -c ':*)",
+      "Bash(curl -s \"https://api.github.com/repos/marilia-cs/cs-prism\")"
+    ]
+  }
+}
