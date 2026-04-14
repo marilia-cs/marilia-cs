@@ -27,6 +27,10 @@ async function getRepos(): Promise<GitHubRepo[]> {
   }
 }
 
+const INTERNAL_DEMOS: Record<string, string> = {
+  "cs-prism": "/tools/cs-prism/",
+};
+
 export default async function Projects() {
   const t = await getTranslations("projects");
   const repos = await getRepos();
@@ -54,9 +58,8 @@ export default async function Projects() {
           {repos.map((repo, index) => (
             <a
               key={repo.id}
-              href={repo.html_url}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={INTERNAL_DEMOS[repo.name] ?? repo.html_url}
+              {...(INTERNAL_DEMOS[repo.name] ? {} : { target: "_blank", rel: "noopener noreferrer" })}
               className="rounded-xl p-6 flex flex-col gap-4 group transition-all duration-200 hover:-translate-y-0.5 border border-white/5 hover:border-white/[0.12]"
               style={{ background: "var(--surface)" }}
             >
