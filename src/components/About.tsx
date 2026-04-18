@@ -22,12 +22,18 @@ export default function About() {
         <h2 className="text-3xl md:text-4xl font-light tracking-tight mb-10">
           {t("title")}
         </h2>
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl">
+        <div className="flex flex-col gap-4 max-w-3xl">
           <p className="text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
             {t("bio_1")}
           </p>
           <p className="text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
             {t("bio_2")}
+          </p>
+          <p className="text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            {t("bio_3")}
+          </p>
+          <p className="text-base leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            {t("bio_4")}
           </p>
         </div>
       </div>
