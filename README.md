@@ -1,4 +1,4 @@
-# Hi, I'm Marília Gomes ✨
+# Hi, I'm Marília Gomes 👋🏻
 
 **Customer Success professional** with experience in B2B and B2C, specialized in retention, revenue expansion, and strategic relationship management.
 
