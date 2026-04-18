@@ -1,4 +1,4 @@
-# Hi, I'm Marília Gomes 👋
+# Hi, I'm Marília Gomes ✨
 
 **Customer Success professional** with experience in B2B and B2C, specialized in retention, revenue expansion, and strategic relationship management.
 
@@ -9,7 +9,7 @@ Currently working as **Customer Success Analyst at Elements**, managing high-vol
 ## About me
 
 - 🎯 Specialized in **retention, expansion, and key metric analysis** — NPS, CSAT, Health Score, Churn Risk, MRR
-- 🏢 Background at **Vista Software**, **Loft**, and **Elements** managing strategic accounts in SaaS and real estate
+- 🏢 Background at **Vista Software**, **Loft**, **Allura Brand** and **Elements** managing strategic accounts in SaaS and real estate
 - 🛠️ Daily tools: Zendesk, Shopify, ERP systems, and data-driven decision making
 - 🤝 Strong focus on consultative support, stakeholder relationships, and customer experience
 - 🌎 Based in Brazil · Open to remote opportunities
