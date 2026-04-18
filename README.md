@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hi, I'm Marília Gomes 👋
 
-## Getting Started
+**Customer Success professional** with experience in B2B and B2C, specialized in retention, revenue expansion, and strategic relationship management.
 
-First, run the development server:
+Currently working as **Customer Success Analyst at Elements**, managing high-volume multichannel environments with a focus on SLA compliance, customer satisfaction, and workflow optimization.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## About me
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- 🎯 Specialized in **retention, expansion, and key metric analysis** — NPS, CSAT, Health Score, Churn Risk, MRR
+- 🏢 Background at **Vista Software**, **Loft**, and **Elements** managing strategic accounts in SaaS and real estate
+- 🛠️ Daily tools: Zendesk, Shopify, ERP systems, and data-driven decision making
+- 🤝 Strong focus on consultative support, stakeholder relationships, and customer experience
+- 🌎 Based in Brazil · Open to remote opportunities
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Experience highlights
 
-To learn more about Next.js, take a look at the following resources:
+| Company | Role | Period |
+|---|---|---|
+| Elements | Customer Success Analyst | Nov 2025 — Present |
+| Allura Brand | Sales & Customer Experience Consultant | May 2025 — Nov 2025 |
+| Loft | Customer Success Manager | Apr 2024 — Feb 2025 |
+| Vista Software | Customer Success Manager | Jun 2021 — Apr 2024 |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## What I build here
 
-## Deploy on Vercel
+I use this space to document **CS tools, templates, and analyses** that help teams work smarter — from health score models to automation scripts and customer journey frameworks.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Let's connect
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-mariliagomes---%230077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mariliagomes-/)
+[![Email](https://img.shields.io/badge/Email-marilia.agms%40gmail.com-D14836?style=flat&logo=gmail&logoColor=white)](mailto:marilia.agms@gmail.com)
+[![Portfolio](https://img.shields.io/badge/Portfolio-marilia--csm.vercel.app-000000?style=flat&logo=vercel&logoColor=white)](https://marilia-csm.vercel.app)
