@@ -35,6 +35,16 @@ I use this space to document **CS tools, templates, and analyses** that help tea
 
 ## Let's connect
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-mariliagomes---%230077B5?style=flat&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mariliagomes-/)
-[![Email](https://img.shields.io/badge/Email-marilia.agms%40gmail.com-D14836?style=flat&logo=gmail&logoColor=white)](mailto:marilia.agms@gmail.com)
-[![Portfolio](https://img.shields.io/badge/Portfolio-marilia--csm.vercel.app-000000?style=flat&logo=vercel&logoColor=white)](https://marilia-csm.vercel.app)
+<p align="left">
+  <a href="https://www.linkedin.com/in/mariliagomes-/">
+    <img src="https://img.shields.io/badge/LinkedIn-%230077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
+  </a>
+  &nbsp;
+  <a href="mailto:marilia.agms@gmail.com">
+    <img src="https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white" alt="Email" />
+  </a>
+  &nbsp;
+  <a href="https://marilia-csm.vercel.app">
+    <img src="https://img.shields.io/badge/Portfolio-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Portfolio" />
+  </a>
+</p>
